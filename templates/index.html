@@ -1,0 +1,1071 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NeuralVision - AI Vehicle Classification</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            200: '#bae6fd',
+                            300: '#7dd3fc',
+                            400: '#38bdf8',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                            700: '#0369a1',
+                            800: '#075985',
+                            900: '#0c4a6e',
+                        },
+                        secondary: {
+                            50: '#f5f3ff',
+                            100: '#ede9fe',
+                            200: '#ddd6fe',
+                            300: '#c4b5fd',
+                            400: '#a78bfa',
+                            500: '#8b5cf6',
+                            600: '#7c3aed',
+                            700: '#6d28d9',
+                            800: '#5b21b6',
+                            900: '#4c1d95',
+                        }
+                    },
+                    animation: {
+                        'float': 'float 3s ease-in-out infinite',
+                        'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'bounce-slow': 'bounce 3s infinite',
+                        'spin-slow': 'spin 8s linear infinite',
+                    },
+                    keyframes: {
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-10px)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Animation library -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        h1, h2, h3, h4, h5, h6 {
+            font-family: 'Poppins', sans-serif;
+        }
+
+        .slide {
+            display: none;
+            transition: all 0.5s ease;
+        }
+
+        .slide.active {
+            display: block;
+            animation: fadeIn 0.8s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .confidence-bar {
+            height: 24px;
+            transition: width 1s ease-in-out;
+        }
+
+        .bento-card {
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            overflow: hidden;
+        }
+
+        .bento-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+
+        .bento-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0) 100%);
+            z-index: 1;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .bento-card:hover::before {
+            opacity: 1;
+        }
+
+        .upload-area {
+            border: 2px dashed rgba(99, 102, 241, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .upload-area:hover, .upload-area.dragover {
+            border-color: rgba(99, 102, 241, 0.8);
+            background-color: rgba(99, 102, 241, 0.05);
+        }
+
+        #preview-image {
+            max-height: 300px;
+            object-fit: contain;
+        }
+
+        .gradient-text {
+            background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-fill-color: transparent;
+        }
+
+        .gradient-bg {
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+        }
+
+        .gradient-border {
+            position: relative;
+            border-radius: 0.5rem;
+            background: linear-gradient(white, white) padding-box,
+                        linear-gradient(135deg, #3b82f6, #8b5cf6) border-box;
+            border: 2px solid transparent;
+        }
+
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+        }
+
+        .icon-container {
+            position: relative;
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            color: white;
+            margin-bottom: 1rem;
+            overflow: hidden;
+        }
+
+        .icon-container::after {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0) 50%);
+            top: -50%;
+            left: -50%;
+            transform: rotate(45deg);
+            transition: all 0.3s ease;
+        }
+
+        .bento-card:hover .icon-container::after {
+            top: 100%;
+            left: 100%;
+        }
+
+        .carousel-container {
+            position: relative;
+            overflow: hidden;
+            border-radius: 1rem;
+        }
+
+        .carousel-track {
+            display: flex;
+            transition: transform 0.5s ease-in-out;
+        }
+
+        .carousel-slide {
+            min-width: 100%;
+            position: relative;
+        }
+
+        .carousel-content {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 2rem;
+            background: linear-gradient(to top, rgba(0, 0, 0, 0.8), transparent);
+            color: white;
+        }
+
+        .carousel-nav {
+            position: absolute;
+            bottom: 1rem;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: center;
+            gap: 0.5rem;
+            z-index: 10;
+        }
+
+        .carousel-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: rgba(255, 255, 255, 0.5);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .carousel-dot.active {
+            background-color: white;
+            transform: scale(1.2);
+        }
+
+        .architecture-card {
+            position: relative;
+            overflow: hidden;
+            border-radius: 1rem;
+            background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
+        }
+
+        .architecture-card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(59, 130, 246, 0.1) 0%, rgba(59, 130, 246, 0) 70%);
+            z-index: 0;
+            animation: pulse-slow 8s infinite;
+        }
+
+        @keyframes pulse-slow {
+            0%, 100% {
+                transform: scale(1);
+                opacity: 0.5;
+            }
+            50% {
+                transform: scale(1.05);
+                opacity: 0.8;
+            }
+        }
+
+        .architecture-step {
+            position: relative;
+            z-index: 1;
+            transition: all 0.3s ease;
+        }
+
+        .architecture-step:hover {
+            transform: translateY(-3px);
+        }
+
+        .nav-link {
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .nav-link::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 50%;
+            width: 0;
+            height: 2px;
+            background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+            transition: all 0.3s ease;
+            transform: translateX(-50%);
+        }
+
+        .nav-link:hover::after {
+            width: 100%;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Header/Navigation -->
+    <header class="glass-effect sticky top-0 z-50">
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16 items-center">
+                <!-- Logo -->
+                <div class="flex items-center">
+                    <a href="#" class="flex items-center">
+                        <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-primary-500 to-secondary-600 flex items-center justify-center mr-2 shadow-lg">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
+                            </svg>
+                        </div>
+                        <span class="text-xl font-bold text-gray-800">Neural<span class="gradient-text">Vision</span></span>
+                    </a>
+                </div>
+
+                <!-- Navigation - Desktop -->
+                <nav class="hidden md:flex space-x-8">
+                    <a href="#home" class="nav-link text-gray-700 hover:text-primary-600 px-3 py-2 font-medium">Home</a>
+                    <a href="#features" class="nav-link text-gray-700 hover:text-primary-600 px-3 py-2 font-medium">Features</a>
+                    <a href="#architecture" class="nav-link text-gray-700 hover:text-primary-600 px-3 py-2 font-medium">Architecture</a>
+                    <a href="#classify" class="nav-link text-gray-700 hover:text-primary-600 px-3 py-2 font-medium">Classify</a>
+                </nav>
+
+                <!-- Get Started Button -->
+                <div class="hidden md:flex">
+                    <a href="#classify" class="relative overflow-hidden group bg-gradient-to-r from-primary-500 to-secondary-600 text-white px-6 py-2 rounded-full font-medium transition duration-300 shadow-md hover:shadow-lg">
+                        <span class="relative z-10">Get Started</span>
+                        <span class="absolute inset-0 bg-gradient-to-r from-primary-600 to-secondary-700 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></span>
+                    </a>
+                </div>
+
+                <!-- Mobile menu button -->
+                <div class="md:hidden">
+                    <button id="mobile-menu-button" class="text-gray-700 hover:text-primary-600 focus:outline-none">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Mobile Navigation Menu -->
+            <div id="mobile-menu" class="md:hidden hidden pb-3 animate__animated animate__fadeIn">
+                <div class="flex flex-col space-y-2">
+                    <a href="#home" class="text-gray-700 hover:text-primary-600 px-3 py-2 font-medium">Home</a>
+                    <a href="#features" class="text-gray-700 hover:text-primary-600 px-3 py-2 font-medium">Features</a>
+                    <a href="#architecture" class="text-gray-700 hover:text-primary-600 px-3 py-2 font-medium">Architecture</a>
+                    <a href="#classify" class="text-gray-700 hover:text-primary-600 px-3 py-2 font-medium">Classify</a>
+                    <a href="#classify" class="bg-gradient-to-r from-primary-500 to-secondary-600 text-white px-4 py-2 rounded-full font-medium text-center transition duration-300">
+                        Get Started
+                    </a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section id="home" class="py-16 md:py-24 relative overflow-hidden">
+        <div class="absolute inset-0 bg-gradient-to-br from-primary-50 to-secondary-50 z-0"></div>
+        <div class="absolute top-0 right-0 w-1/3 h-1/3 bg-gradient-to-br from-primary-100 to-primary-200 rounded-full filter blur-3xl opacity-50 transform translate-x-1/2 -translate-y-1/2 z-0"></div>
+        <div class="absolute bottom-0 left-0 w-1/3 h-1/3 bg-gradient-to-br from-secondary-100 to-secondary-200 rounded-full filter blur-3xl opacity-50 transform -translate-x-1/2 translate-y-1/2 z-0"></div>
+
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+            <div class="flex flex-col md:flex-row items-center">
+                <div class="md:w-1/2 mb-12 md:mb-0 md:pr-8">
+                    <div class="inline-block px-3 py-1 rounded-full bg-gradient-to-r from-primary-100 to-secondary-100 text-primary-800 font-medium text-sm mb-6 animate__animated animate__fadeInUp">
+                        AI-Powered Classification
+                    </div>
+                    <h1 class="text-4xl md:text-5xl lg:text-6xl font-bold text-gray-800 mb-6 leading-tight animate__animated animate__fadeInUp">
+                        Intelligent <span class="gradient-text">Vehicle</span> Classification
+                    </h1>
+                    <p class="text-lg text-gray-600 mb-8 animate__animated animate__fadeInUp animate__delay-1s">
+                        Leverage the power of deep learning to accurately classify vehicles in images. Our advanced AI model identifies bicycles, cars, motorbikes, and trucks with exceptional precision.
+                    </p>
+                    <div class="flex flex-wrap gap-4 animate__animated animate__fadeInUp animate__delay-2s">
+                        <a href="#classify" class="relative overflow-hidden group bg-gradient-to-r from-primary-500 to-secondary-600 text-white px-6 py-3 rounded-full font-medium text-lg inline-block transition duration-300 shadow-md hover:shadow-lg">
+                            <span class="relative z-10">Try It Now</span>
+                            <span class="absolute inset-0 bg-gradient-to-r from-primary-600 to-secondary-700 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></span>
+                        </a>
+                        <a href="#architecture" class="bg-white text-gray-800 border border-gray-200 hover:border-primary-300 px-6 py-3 rounded-full font-medium text-lg inline-block transition duration-300 shadow-sm hover:shadow">
+                            Learn More
+                        </a>
+                    </div>
+                </div>
+                <div class="md:w-1/2 animate__animated animate__fadeInRight">
+                    <div class="relative">
+                        <div class="absolute inset-0 bg-gradient-to-br from-primary-300 to-secondary-400 rounded-2xl transform rotate-3 scale-105 opacity-20 animate-pulse-slow"></div>
+                        <img src="https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1470&q=80"
+                             alt="Vehicle Classification"
+                             class="rounded-2xl shadow-2xl w-full h-auto relative z-10 animate-float">
+                        <div class="absolute -bottom-4 -right-4 w-24 h-24 bg-gradient-to-br from-primary-500 to-secondary-600 rounded-xl transform rotate-12 animate-spin-slow opacity-70"></div>
+                        <div class="absolute -top-4 -left-4 w-16 h-16 bg-gradient-to-br from-primary-300 to-secondary-400 rounded-lg transform -rotate-12 animate-bounce-slow opacity-70"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Image Carousel -->
+    <section class="py-16 bg-white relative">
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl md:text-4xl font-bold text-gray-800 mb-4">Vehicle <span class="gradient-text">Categories</span></h2>
+                <p class="text-lg text-gray-600 max-w-2xl mx-auto">Our AI model is trained to recognize these four distinct vehicle categories with high accuracy.</p>
+            </div>
+
+            <div class="carousel-container max-w-5xl mx-auto shadow-2xl">
+                <div id="carousel-track" class="carousel-track">
+                    <!-- Slide 1 -->
+                    <div class="carousel-slide">
+                        <img src="https://images.unsplash.com/photo-1511919884226-fd3cad34687c?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1470&q=80"
+                             alt="Car"
+                             class="w-full h-[500px] object-cover">
+                        <div class="carousel-content">
+                            <h3 class="text-white text-3xl font-bold mb-2">Cars</h3>
+                            <p class="text-gray-200 text-lg">Personal vehicles designed for transportation on roads.</p>
+                        </div>
+                    </div>
+
+                    <!-- Slide 2 -->
+                    <div class="carousel-slide">
+                        <img src="https://images.unsplash.com/photo-1558981403-c5f9899a28bc?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1470&q=80"
+                             alt="Motorbike"
+                             class="w-full h-[500px] object-cover">
+                        <div class="carousel-content">
+                            <h3 class="text-white text-3xl font-bold mb-2">Motorbikes</h3>
+                            <p class="text-gray-200 text-lg">Two-wheeled motor vehicles for personal transportation.</p>
+                        </div>
+                    </div>
+
+                    <!-- Slide 3 -->
+                    <div class="carousel-slide">
+                        <img src="https://images.unsplash.com/photo-1485965120184-e220f721d03e?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1470&q=80"
+                             alt="Bicycle"
+                             class="w-full h-[500px] object-cover">
+                        <div class="carousel-content">
+                            <h3 class="text-white text-3xl font-bold mb-2">Bicycles</h3>
+                            <p class="text-gray-200 text-lg">Human-powered two-wheeled vehicles for transportation or recreation.</p>
+                        </div>
+                    </div>
+
+                    <!-- Slide 4 -->
+                    <div class="carousel-slide">
+                        <img src="https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1470&q=80"
+                             alt="Truck"
+                             class="w-full h-[500px] object-cover">
+                        <div class="carousel-content">
+                            <h3 class="text-white text-3xl font-bold mb-2">Trucks</h3>
+                            <p class="text-gray-200 text-lg">Large vehicles designed for transporting cargo or materials.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Carousel controls -->
+                <button id="prev-slide" class="absolute top-1/2 left-4 transform -translate-y-1/2 bg-white/20 hover:bg-white/40 text-white p-3 rounded-full shadow-md transition duration-300 backdrop-blur-sm">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                    </svg>
+                </button>
+                <button id="next-slide" class="absolute top-1/2 right-4 transform -translate-y-1/2 bg-white/20 hover:bg-white/40 text-white p-3 rounded-full shadow-md transition duration-300 backdrop-blur-sm">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                    </svg>
+                </button>
+
+                <!-- Carousel dots -->
+                <div class="carousel-nav">
+                    <div class="carousel-dot active" data-index="0"></div>
+                    <div class="carousel-dot" data-index="1"></div>
+                    <div class="carousel-dot" data-index="2"></div>
+                    <div class="carousel-dot" data-index="3"></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section (Bento UI Design) -->
+    <section id="features" class="py-16 bg-gray-50 relative">
+        <div class="absolute inset-0 bg-gradient-to-br from-gray-50 to-gray-100 z-0"></div>
+        <div class="absolute top-0 right-0 w-1/4 h-1/4 bg-gradient-to-br from-primary-100 to-primary-200 rounded-full filter blur-3xl opacity-30 transform translate-x-1/2 -translate-y-1/2 z-0"></div>
+        <div class="absolute bottom-0 left-0 w-1/4 h-1/4 bg-gradient-to-br from-secondary-100 to-secondary-200 rounded-full filter blur-3xl opacity-30 transform -translate-x-1/2 translate-y-1/2 z-0"></div>
+
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+            <div class="text-center mb-16">
+                <h2 class="text-3xl md:text-4xl font-bold text-gray-800 mb-4">Key <span class="gradient-text">Features</span></h2>
+                <p class="text-lg text-gray-600 max-w-2xl mx-auto">Discover the powerful capabilities of our vehicle classification system.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <!-- Feature 1 -->
+                <div class="bento-card relative bg-white rounded-2xl shadow-lg overflow-hidden p-8 group">
+                    <div class="icon-container animate-pulse-slow">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-semibold text-gray-800 mb-3 group-hover:text-primary-600 transition-colors duration-300">Real-time Classification</h3>
+                    <p class="text-gray-600">
+                        Instantly classify vehicles from uploaded images with our high-performance AI model.
+                    </p>
+                </div>
+
+                <!-- Feature 2 -->
+                <div class="bento-card relative bg-white rounded-2xl shadow-lg overflow-hidden p-8 group">
+                    <div class="icon-container animate-pulse-slow">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-semibold text-gray-800 mb-3 group-hover:text-primary-600 transition-colors duration-300">Advanced Deep Learning</h3>
+                    <p class="text-gray-600">
+                        Powered by MobileNetV2, a state-of-the-art convolutional neural network for image classification.
+                    </p>
+                </div>
+
+                <!-- Feature 3 -->
+                <div class="bento-card relative bg-white rounded-2xl shadow-lg overflow-hidden p-8 group">
+                    <div class="icon-container animate-pulse-slow">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-semibold text-gray-800 mb-3 group-hover:text-primary-600 transition-colors duration-300">Confidence Metrics</h3>
+                    <p class="text-gray-600">
+                        Get detailed confidence scores for each prediction to understand model certainty.
+                    </p>
+                </div>
+
+                <!-- Feature 4 -->
+                <div class="bento-card relative bg-white rounded-2xl shadow-lg overflow-hidden p-8 group">
+                    <div class="icon-container animate-pulse-slow">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-semibold text-gray-800 mb-3 group-hover:text-primary-600 transition-colors duration-300">Mobile Friendly</h3>
+                    <p class="text-gray-600">
+                        Fully responsive design works seamlessly on desktop, tablet, and mobile devices.
+                    </p>
+                </div>
+
+                <!-- Feature 5 -->
+                <div class="bento-card relative bg-white rounded-2xl shadow-lg overflow-hidden p-8 group">
+                    <div class="icon-container animate-pulse-slow">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-semibold text-gray-800 mb-3 group-hover:text-primary-600 transition-colors duration-300">High Accuracy</h3>
+                    <p class="text-gray-600">
+                        Our model achieves high classification accuracy across all vehicle categories.
+                    </p>
+                </div>
+
+                <!-- Feature 6 -->
+                <div class="bento-card relative bg-white rounded-2xl shadow-lg overflow-hidden p-8 group">
+                    <div class="icon-container animate-pulse-slow">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-semibold text-gray-800 mb-3 group-hover:text-primary-600 transition-colors duration-300">API Integration</h3>
+                    <p class="text-gray-600">
+                        Easily integrate our classification service into your own applications via REST API.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Architecture Section -->
+    <section id="architecture" class="py-16 bg-white">
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-16">
+                <h2 class="text-3xl md:text-4xl font-bold text-gray-800 mb-4">Model <span class="gradient-text">Architecture</span></h2>
+                <p class="text-lg text-gray-600 max-w-2xl mx-auto">Understanding the technology behind our vehicle classification system.</p>
+            </div>
+
+            <div class="architecture-card max-w-5xl mx-auto p-8 shadow-xl">
+                <div class="flex flex-col md:flex-row">
+                    <div class="md:w-1/2 mb-8 md:mb-0 md:pr-8">
+                        <h3 class="text-2xl font-semibold text-gray-800 mb-6 gradient-text">MobileNetV2 Architecture</h3>
+                        <p class="text-gray-700 mb-6">
+                            Our vehicle classification system uses MobileNetV2, a lightweight convolutional neural network designed for mobile and edge devices.
+                        </p>
+                        <ul class="space-y-4">
+                            <li class="flex items-start">
+                                <div class="flex-shrink-0 h-6 w-6 rounded-full bg-gradient-to-r from-primary-500 to-secondary-500 flex items-center justify-center text-white text-sm font-bold">1</div>
+                                <p class="ml-3 text-gray-700">Pre-trained on ImageNet and fine-tuned on vehicle dataset</p>
+                            </li>
+                            <li class="flex items-start">
+                                <div class="flex-shrink-0 h-6 w-6 rounded-full bg-gradient-to-r from-primary-500 to-secondary-500 flex items-center justify-center text-white text-sm font-bold">2</div>
+                                <p class="ml-3 text-gray-700">Input size: 64x64 RGB images</p>
+                            </li>
+                            <li class="flex items-start">
+                                <div class="flex-shrink-0 h-6 w-6 rounded-full bg-gradient-to-r from-primary-500 to-secondary-500 flex items-center justify-center text-white text-sm font-bold">3</div>
+                                <p class="ml-3 text-gray-700">Output: 4 classes (bicycle, car, motorbike, truck)</p>
+                            </li>
+                            <li class="flex items-start">
+                                <div class="flex-shrink-0 h-6 w-6 rounded-full bg-gradient-to-r from-primary-500 to-secondary-500 flex items-center justify-center text-white text-sm font-bold">4</div>
+                                <p class="ml-3 text-gray-700">Optimizer: Adam with learning rate 0.001</p>
+                            </li>
+                            <li class="flex items-start">
+                                <div class="flex-shrink-0 h-6 w-6 rounded-full bg-gradient-to-r from-primary-500 to-secondary-500 flex items-center justify-center text-white text-sm font-bold">5</div>
+                                <p class="ml-3 text-gray-700">Loss function: Cross Entropy Loss</p>
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="md:w-1/2">
+                        <div class="bg-white rounded-xl shadow-lg p-6">
+                            <div class="flex flex-col space-y-4">
+                                <div class="architecture-step bg-gradient-to-r from-primary-50 to-secondary-50 p-4 rounded-xl text-center border border-primary-100">
+                                    <p class="font-medium text-gray-800">Input Layer (64x64x3)</p>
+                                </div>
+                                <div class="flex justify-center">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-primary-500 animate-bounce-slow" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                                    </svg>
+                                </div>
+                                <div class="architecture-step bg-gradient-to-r from-primary-100 to-secondary-100 p-4 rounded-xl text-center border border-primary-200">
+                                    <p class="font-medium text-gray-800">MobileNetV2 Feature Extractor</p>
+                                </div>
+                                <div class="flex justify-center">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-primary-500 animate-bounce-slow" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                                    </svg>
+                                </div>
+                                <div class="architecture-step bg-gradient-to-r from-primary-200 to-secondary-200 p-4 rounded-xl text-center border border-primary-300">
+                                    <p class="font-medium text-gray-800">Global Average Pooling</p>
+                                </div>
+                                <div class="flex justify-center">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-primary-500 animate-bounce-slow" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                                    </svg>
+                                </div>
+                                <div class="architecture-step bg-gradient-to-r from-primary-300 to-secondary-300 p-4 rounded-xl text-center border border-primary-400">
+                                    <p class="font-medium text-gray-800">Fully Connected Layer</p>
+                                </div>
+                                <div class="flex justify-center">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-primary-500 animate-bounce-slow" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                                    </svg>
+                                </div>
+                                <div class="architecture-step bg-gradient-to-r from-primary-500 to-secondary-500 p-4 rounded-xl text-center border border-primary-600">
+                                    <p class="font-medium text-white">Output Layer (4 classes)</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Classification Section -->
+    <section id="classify" class="py-16 bg-gray-50 relative">
+        <div class="absolute inset-0 bg-gradient-to-br from-gray-50 to-gray-100 z-0"></div>
+        <div class="absolute top-0 right-0 w-1/4 h-1/4 bg-gradient-to-br from-primary-100 to-primary-200 rounded-full filter blur-3xl opacity-30 transform translate-x-1/2 -translate-y-1/2 z-0"></div>
+        <div class="absolute bottom-0 left-0 w-1/4 h-1/4 bg-gradient-to-br from-secondary-100 to-secondary-200 rounded-full filter blur-3xl opacity-30 transform -translate-x-1/2 translate-y-1/2 z-0"></div>
+
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+            <div class="text-center mb-16">
+                <h2 class="text-3xl md:text-4xl font-bold text-gray-800 mb-4">Vehicle <span class="gradient-text">Classification</span></h2>
+                <p class="text-lg text-gray-600 max-w-2xl mx-auto">Upload an image to classify it as a bicycle, car, motorbike, or truck.</p>
+            </div>
+
+            <div class="max-w-4xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden">
+                <div class="p-8">
+                    <form id="upload-form" class="mb-8">
+                        <div id="upload-area" class="upload-area flex flex-col items-center justify-center p-10 rounded-xl cursor-pointer mb-6 bg-gray-50 hover:bg-primary-50 transition-colors duration-300">
+                            <div class="w-20 h-20 rounded-full bg-primary-100 flex items-center justify-center mb-4 animate-pulse-slow">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-primary-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                                </svg>
+                            </div>
+                            <p class="text-gray-700 text-lg font-medium mb-2">Drag and drop an image here or click to browse</p>
+                            <p class="text-gray-500">Supported formats: JPG, PNG, JPEG</p>
+                            <input type="file" id="file-input" name="file" accept="image/*" class="hidden" required>
+                        </div>
+
+                        <div class="flex justify-center">
+                            <button type="submit" id="classify-btn" class="relative overflow-hidden group bg-gradient-to-r from-primary-500 to-secondary-600 text-white px-8 py-3 rounded-full font-medium transition duration-300 shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                                <span class="relative z-10 flex items-center">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                                    </svg>
+                                    Classify Vehicle
+                                </span>
+                                <span class="absolute inset-0 bg-gradient-to-r from-primary-600 to-secondary-700 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></span>
+                            </button>
+                        </div>
+                    </form>
+
+                    <div id="result-container" class="hidden">
+                        <div class="border-t border-gray-200 pt-8">
+                            <div class="flex flex-col md:flex-row">
+                                <div class="md:w-1/2 mb-8 md:mb-0 md:pr-8">
+                                    <h3 class="text-xl font-semibold text-gray-800 mb-4">Uploaded Image</h3>
+                                    <div class="bg-gray-50 rounded-xl p-4 flex items-center justify-center border border-gray-100">
+                                        <img id="preview-image" src="/placeholder.svg" alt="Uploaded vehicle" class="rounded-lg max-w-full shadow-md">
+                                    </div>
+                                </div>
+
+                                <div class="md:w-1/2">
+                                    <h3 class="text-xl font-semibold text-gray-800 mb-4">Classification Result</h3>
+
+                                    <div class="bg-gray-50 rounded-xl p-6 border border-gray-100">
+                                        <div class="mb-6">
+                                            <p class="text-gray-600 mb-1">Prediction:</p>
+                                            <p id="prediction-result" class="text-3xl font-bold gradient-text"></p>
+                                        </div>
+
+                                        <div class="mb-8">
+                                            <p class="text-gray-600 mb-2">Confidence:</p>
+                                            <div class="relative pt-1">
+                                                <div class="flex items-center justify-between mb-2">
+                                                    <div>
+                                                        <span id="confidence-value" class="text-xl font-semibold inline-block"></span>
+                                                    </div>
+                                                </div>
+                                                <div class="overflow-hidden h-6 mb-4 text-xs flex rounded-full bg-gray-200">
+                                                    <div id="confidence-bar" class="confidence-bar shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center rounded-full"></div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <button id="classify-another" class="w-full bg-white hover:bg-gray-50 text-gray-800 border border-gray-200 px-4 py-3 rounded-full font-medium transition duration-300 flex items-center justify-center">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                            </svg>
+                                            Classify Another Image
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-gradient-to-r from-gray-800 to-gray-900 text-white py-16">
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-12">
+                <!-- About -->
+                <div>
+                    <div class="flex items-center mb-6">
+                        <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-primary-500 to-secondary-600 flex items-center justify-center mr-2 shadow-lg">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
+                            </svg>
+                        </div>
+                        <span class="text-xl font-bold">Neural<span class="text-primary-400">Vision</span></span>
+                    </div>
+                    <p class="text-gray-400 mb-6">
+                        Advanced vehicle classification using deep learning technology. Accurately identify bicycles, cars, motorbikes, and trucks from images.
+                    </p>
+                    <div class="flex space-x-4">
+                        <a href="#" class="text-gray-400 hover:text-white transition duration-300">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+                            </svg>
+                        </a>
+                        <a href="#" class="text-gray-400 hover:text-white transition duration-300">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723 10.054 10.054 0 01-3.127 1.184 4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z"/>
+                            </svg>
+                        </a>
+                        <a href="#" class="text-gray-400 hover:text-white transition duration-300">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+                            </svg>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Quick Links -->
+                <div>
+                    <h3 class="text-lg font-semibold mb-6">Quick Links</h3>
+                    <ul class="space-y-4">
+                        <li>
+                            <a href="#home" class="text-gray-400 hover:text-white transition duration-300 flex items-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                                </svg>
+                                Home
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#features" class="text-gray-400 hover:text-white transition duration-300 flex items-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                                </svg>
+                                Features
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#architecture" class="text-gray-400 hover:text-white transition duration-300 flex items-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                                </svg>
+                                Architecture
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#classify" class="text-gray-400 hover:text-white transition duration-300 flex items-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                                </svg>
+                                Classify
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+<!-- Contact -->
+<div>
+    <h3 class="text-lg font-semibold mb-6">Contact Us</h3>
+    <ul class="space-y-4">
+        <li class="flex items-start">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-400 mr-3 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+            </svg>
+            <span class="text-gray-400">supu1513reddy@gmail.com</span>
+        </li>
+        <li class="flex items-start">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-400 mr-3 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+            </svg>
+            <span class="text-gray-400">+91 90304 08615</span>
+        </li>
+        <li class="flex items-start">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-400 mr-3 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            <span class="text-gray-400">Hyderabad, Telangana, India</span>
+        </li>
+    </ul>
+</div>
+
+    <!-- JavaScript -->
+    <script>
+        // Mobile menu toggle
+        document.getElementById('mobile-menu-button').addEventListener('click', function() {
+            const mobileMenu = document.getElementById('mobile-menu');
+            mobileMenu.classList.toggle('hidden');
+        });
+
+        // Carousel functionality
+        let currentSlide = 0;
+        const track = document.getElementById('carousel-track');
+        const slides = document.querySelectorAll('.carousel-slide');
+        const dots = document.querySelectorAll('.carousel-dot');
+        const slideWidth = slides[0].clientWidth;
+
+        function goToSlide(index) {
+            if (index < 0) index = slides.length - 1;
+            if (index >= slides.length) index = 0;
+
+            track.style.transform = `translateX(-${index * 100}%)`;
+
+            // Update dots
+            dots.forEach((dot, i) => {
+                if (i === index) {
+                    dot.classList.add('active');
+                } else {
+                    dot.classList.remove('active');
+                }
+            });
+
+            currentSlide = index;
+        }
+
+        // Next slide
+        document.getElementById('next-slide').addEventListener('click', function() {
+            goToSlide(currentSlide + 1);
+        });
+
+        // Previous slide
+        document.getElementById('prev-slide').addEventListener('click', function() {
+            goToSlide(currentSlide - 1);
+        });
+
+        // Dot navigation
+        dots.forEach((dot, index) => {
+            dot.addEventListener('click', function() {
+                goToSlide(index);
+            });
+        });
+
+        // Auto-advance slides every 5 seconds
+        setInterval(function() {
+            goToSlide(currentSlide + 1);
+        }, 5000);
+
+        // File upload handling
+        const fileInput = document.getElementById('file-input');
+        const uploadArea = document.getElementById('upload-area');
+        const classifyBtn = document.getElementById('classify-btn');
+        const uploadForm = document.getElementById('upload-form');
+        const resultContainer = document.getElementById('result-container');
+        const previewImage = document.getElementById('preview-image');
+        const predictionResult = document.getElementById('prediction-result');
+        const confidenceValue = document.getElementById('confidence-value');
+        const confidenceBar = document.getElementById('confidence-bar');
+        const classifyAnother = document.getElementById('classify-another');
+
+        // Click on upload area to trigger file input
+        uploadArea.addEventListener('click', function() {
+            fileInput.click();
+        });
+
+        // Drag and drop functionality
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            uploadArea.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            uploadArea.addEventListener(eventName, function() {
+                uploadArea.classList.add('dragover');
+            }, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            uploadArea.addEventListener(eventName, function() {
+                uploadArea.classList.remove('dragover');
+            }, false);
+        });
+
+        uploadArea.addEventListener('drop', function(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            fileInput.files = files;
+            handleFiles(files);
+        }, false);
+
+        // Handle file selection
+        fileInput.addEventListener('change', function() {
+            if (fileInput.files.length) {
+                handleFiles(fileInput.files);
+            }
+        });
+
+        function handleFiles(files) {
+            const file = files[0];
+            if (file.type.startsWith('image/')) {
+                // Enable classify button
+                classifyBtn.disabled = false;
+
+                // Preview the image
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    previewImage.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            } else {
+                alert('Please upload an image file.');
+                fileInput.value = '';
+                classifyBtn.disabled = true;
+            }
+        }
+
+        // Form submission
+        uploadForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            if (!fileInput.files.length) {
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            // Show loading state
+            classifyBtn.disabled = true;
+            classifyBtn.innerHTML = '<span class="relative z-10 flex items-center"><svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>Classifying...</span>';
+
+            fetch('/predict', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert('Error: ' + data.error);
+                    classifyBtn.disabled = false;
+                    classifyBtn.innerHTML = '<span class="relative z-10 flex items-center"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>Classify Vehicle</span>';
+                    return;
+                }
+
+                // Display results
+                predictionResult.textContent = data.prediction.charAt(0).toUpperCase() + data.prediction.slice(1);
+                confidenceValue.textContent = data.confidence + '%';
+
+                // Set confidence bar color and width
+                confidenceBar.style.width = data.confidence + '%';
+                confidenceBar.className = 'confidence-bar shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center rounded-full';
+
+                if (data.color === 'green') {
+                    confidenceBar.classList.add('bg-green-500');
+                } else if (data.color === 'yellow') {
+                    confidenceBar.classList.add('bg-yellow-500');
+                } else {
+                    confidenceBar.classList.add('bg-red-500');
+                }
+
+                // Show result container
+                uploadForm.classList.add('hidden');
+                resultContainer.classList.remove('hidden');
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred during classification. Please try again.');
+                classifyBtn.disabled = false;
+                classifyBtn.innerHTML = '<span class="relative z-10 flex items-center"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>Classify Vehicle</span>';
+            });
+        });
+
+        // Classify another image
+        classifyAnother.addEventListener('click', function() {
+            // Reset form
+            uploadForm.reset();
+            classifyBtn.disabled = true;
+            classifyBtn.innerHTML = '<span class="relative z-10 flex items-center"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>Classify Vehicle</span>';
+
+            // Clear confidence bar classes
+            confidenceBar.className = 'confidence-bar shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center rounded-full';
+            confidenceBar.style.width = '0%';
+
+            // Hide results and show form
+            resultContainer.classList.add('hidden');
+            uploadForm.classList.remove('hidden');
+        });
+
+        // Smooth scrolling for navigation links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function(e) {
+                e.preventDefault();
+
+                const targetId = this.getAttribute('href');
+                const targetElement = document.querySelector(targetId);
+
+                if (targetElement) {
+                    // Close mobile menu if open
+                    document.getElementById('mobile-menu').classList.add('hidden');
+
+                    // Scroll to target
+                    window.scrollTo({
+                        top: targetElement.offsetTop - 80, // Offset for fixed header
+                        behavior: 'smooth'
+                    });
+                }
+            });
+        });
+    </script>
+</body>
+</html>
