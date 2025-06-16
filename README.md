@@ -4,14 +4,6 @@ A deep learning-based web application that classifies vehicle images into one of
 
 ---
 
-## 📸 Demo
-
-> Upload an image of a vehicle and get its predicted class instantly.
-
-![App Screenshot](screenshots/sample_output.png) <!-- (Replace with your screenshot path) -->
-
----
-
 ## 🔧 Tech Stack
 
 - **Frontend**: HTML, CSS, TailwindCSS (optional), JavaScript
