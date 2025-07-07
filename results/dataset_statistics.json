@@ -1,0 +1,50 @@
+{
+  "total_images": 906,
+  "corrupted_images": 0,
+  "vehicle_distribution": {
+    "bicycle": 216,
+    "car": 220,
+    "motor bike": 242,
+    "truck": 228
+  },
+  "color_distribution": {
+    "blue": 117,
+    "grey": 97,
+    "green": 76,
+    "yellow": 100,
+    "black": 64,
+    "white": 94,
+    "red": 88,
+    "orange": 84,
+    "brown": 91,
+    "silver": 95
+  },
+  "condition_distribution": {
+    "good": 441,
+    "fair": 465
+  },
+  "vehicle_classes": [
+    "bicycle",
+    "car",
+    "motor bike",
+    "truck"
+  ],
+  "color_classes": [
+    "black",
+    "blue",
+    "brown",
+    "green",
+    "grey",
+    "orange",
+    "red",
+    "silver",
+    "white",
+    "yellow"
+  ],
+  "condition_classes": [
+    "excellent",
+    "good",
+    "fair",
+    "poor"
+  ]
+}
