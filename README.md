@@ -125,3 +125,9 @@ This project is open source and free to use under the MIT License.
 
 Developed by Supraj Reddy  
 Guided by real-world deployment and ML engineering best practices
+
+## 🌐 Live Demo
+
+Try the app here:  
+👉 [Vehicle Classifier Web App (Hosted on Render)](https://vehicle-classifier-h9yn.onrender.com)
+
