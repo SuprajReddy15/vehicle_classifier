@@ -11,6 +11,7 @@ from werkzeug.utils import secure_filename
 import base64
 import uuid
 from pathlib import Path
+import gdown
 from config import *
 from model_architecture import ModelFactory
 
@@ -30,6 +31,17 @@ app.config.update(FLASK_CONFIG)
 app.config['MAX_CONTENT_LENGTH'] = FLASK_CONFIG['max_content_length']
 app.config['UPLOAD_FOLDER'] = FLASK_CONFIG['upload_folder']
 
+# Download model from Google Drive if not exists
+if not os.path.exists(BEST_MODEL_PATH):
+    print("\U0001F4E6 Model not found. Downloading from Google Drive...")
+    gdown.download(
+        "https://drive.google.com/uc?id=1Bt6x2zuuli5TZ0EC67HmweyrBclESRD9",
+        output=str(BEST_MODEL_PATH),
+        quiet=False,
+        fuzzy=True
+    )
+    print("\u2705 Model downloaded successfully.")
+
 class VehicleversePredictor:
     """Vehicleverse prediction engine"""
 
@@ -43,31 +55,21 @@ class VehicleversePredictor:
             'size': SIZE_CLASSES
         }
 
-        # Load model
         self.load_model()
-        # Setup transforms
         self.setup_transforms()
 
     def load_model(self):
-        """Load the trained Vehicleverse model"""
         try:
-            # Try to load best model first, then fallback to regular model
             model_paths = [BEST_MODEL_PATH, self.model_path]
 
             for path in model_paths:
                 if os.path.exists(path):
-                    # Load with weights_only=False to handle the serialization issue
                     checkpoint = torch.load(path, map_location=self.device, weights_only=False)
-
-                    # Create model
                     model_config = checkpoint.get('model_config', MODEL_CONFIG)
                     self.model = ModelFactory.create_model(model_config)
-
-                    # Load state dict
                     self.model.load_state_dict(checkpoint['model_state_dict'])
                     self.model.to(self.device)
                     self.model.eval()
-
                     logger.info(f"✅ Vehicleverse model loaded successfully from {path}!")
                     logger.info(f"   Device: {self.device}")
                     logger.info(f"   Model accuracy: {checkpoint.get('val_accuracy', 'Unknown')}")
@@ -81,7 +83,6 @@ class VehicleversePredictor:
             return False
 
     def setup_transforms(self):
-        """Setup image preprocessing transforms"""
         from torchvision import transforms
         self.transform = transforms.Compose([
             transforms.Resize((256, 256)),
@@ -94,30 +95,24 @@ class VehicleversePredictor:
         ])
 
     def predict(self, image):
-        """Make prediction on a single image"""
         if self.model is None:
             return None
 
         try:
-            # Preprocess image
             if isinstance(image, str):
                 image = Image.open(image).convert('RGB')
             elif not isinstance(image, Image.Image):
                 return None
 
-            # Apply transforms
             input_tensor = self.transform(image).unsqueeze(0).to(self.device)
 
-            # Make prediction
             with torch.no_grad():
                 outputs = self.model(input_tensor)
 
-            # Process outputs
             predictions = {}
             confidences = {}
 
             for task in ['vehicle', 'size']:
-                # Get probabilities
                 probs = torch.softmax(outputs[task], dim=1)
                 confidence, predicted = torch.max(probs, 1)
 
@@ -129,13 +124,11 @@ class VehicleversePredictor:
                 }
                 confidences[task] = confidence.item() * 100
 
-            # Add size description
             size_name = predictions['size']['class_name']
             predictions['size']['description'] = SIZE_DESCRIPTIONS.get(
                 size_name, 'Standard vehicle size'
             )
 
-            # Calculate overall confidence
             overall_confidence = np.mean(list(confidences.values()))
 
             result = {
@@ -158,19 +151,15 @@ class VehicleversePredictor:
             logger.error(f"❌ Prediction error: {e}")
             return None
 
-# Initialize predictor
 predictor = VehicleversePredictor()
 
 @app.route('/')
 def index():
-    """Main page"""
     return render_template('index.html')
 
 @app.route('/predict', methods=['POST'])
 def predict():
-    """Handle image upload and prediction"""
     try:
-        # Check if file was uploaded
         if 'file' not in request.files:
             return jsonify({'error': 'No file uploaded'}), 400
 
@@ -178,29 +167,23 @@ def predict():
         if file.filename == '':
             return jsonify({'error': 'No file selected'}), 400
 
-        # Validate file type
         if not allowed_file(file.filename):
             return jsonify({'error': 'Invalid file type. Please upload an image.'}), 400
 
-        # Save uploaded file
         filename = secure_filename(f"{uuid.uuid4()}_{file.filename}")
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(filepath)
 
-        # Make prediction
         result = predictor.predict(filepath)
         if result is None:
             return jsonify({'error': 'Prediction failed. Please try again.'}), 500
 
-        # Convert image to base64 for display
         with open(filepath, 'rb') as img_file:
             img_data = base64.b64encode(img_file.read()).decode('utf-8')
 
-        # Add image data to result
         result['image_data'] = f"data:image/jpeg;base64,{img_data}"
         result['filename'] = file.filename
 
-        # Clean up uploaded file
         try:
             os.remove(filepath)
         except:
@@ -214,7 +197,6 @@ def predict():
 
 @app.route('/health')
 def health():
-    """Health check endpoint"""
     return jsonify({
         'status': 'healthy',
         'model_loaded': predictor.model is not None,
@@ -224,7 +206,6 @@ def health():
 
 @app.route('/model-info')
 def model_info():
-    """Get model information"""
     if predictor.model is None:
         return jsonify({'error': 'Model not loaded'}), 500
 
@@ -235,23 +216,19 @@ def model_info():
         return jsonify({'error': 'Could not retrieve model info'}), 500
 
 def allowed_file(filename):
-    """Check if file extension is allowed"""
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in {'jpg', 'jpeg', 'png', 'bmp', 'gif'}
 
 @app.errorhandler(413)
 def too_large(e):
-    """Handle file too large error"""
     return jsonify({'error': 'File too large. Maximum size is 10MB.'}), 413
 
 @app.errorhandler(404)
 def not_found(e):
-    """Handle 404 errors"""
     return render_template('index.html'), 404
 
 @app.errorhandler(500)
 def internal_error(e):
-    """Handle 500 errors"""
     return jsonify({'error': 'Internal server error'}), 500
 
 if __name__ == '__main__':
@@ -261,7 +238,6 @@ if __name__ == '__main__':
     print(f"🎯 Ready to analyze: Type + Size")
     print("=" * 60)
 
-    # Check if model exists
     model_exists = os.path.exists(BEST_MODEL_PATH) or os.path.exists(MODEL_PATH)
     if not model_exists:
         print("⚠️ Warning: No trained model found!")
