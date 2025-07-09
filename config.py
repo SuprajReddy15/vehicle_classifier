@@ -1,4 +1,4 @@
-"""Vehicleverse Configuration - Simplified Professional Vehicle Classification"""
+"""Vehicleverse Configuration - Memory Optimized for Deployment"""
 import os
 from pathlib import Path
 
@@ -29,11 +29,9 @@ def get_actual_vehicle_folders():
 
 # Vehicle Classification Categories
 VEHICLE_CLASSES = ['bicycle', 'car', 'motor bike', 'truck']
-
-# Use actual folders if they exist
 ACTUAL_VEHICLE_CLASSES = get_actual_vehicle_folders()
 
-# Vehicle Size Categories (Much more practical than brand/age)
+# Vehicle Size Categories
 SIZE_CLASSES = ['compact', 'mid-size', 'large', 'extra-large']
 
 # Enhanced Size Descriptions
@@ -50,14 +48,14 @@ MODEL_CONFIG = {
     'pretrained': True,
     'num_classes': len(ACTUAL_VEHICLE_CLASSES),
     'num_sizes': len(SIZE_CLASSES),
-    'hidden_size': 512,
+    'hidden_size': 256,  # Reduced from 512
     'dropout_rate': 0.5,
     'feature_extract': False
 }
 
 # Training Configuration
 TRAINING_CONFIG = {
-    'batch_size': 16,
+    'batch_size': 8,  # Reduced from 16
     'num_epochs': 25,
     'learning_rate': 0.001,
     'weight_decay': 1e-4,
@@ -76,7 +74,7 @@ IMAGE_CONFIG = {
     'resize_size': (256, 256),
     'mean': [0.485, 0.456, 0.406],
     'std': [0.229, 0.224, 0.225],
-    'max_file_size': 16 * 1024 * 1024,  # 16MB
+    'max_file_size': 10 * 1024 * 1024,  # Reduced to 10MB
     'allowed_extensions': {'.jpg', '.jpeg', '.png', '.bmp', '.gif', '.webp'},
     'quality_threshold': 32
 }
@@ -101,25 +99,28 @@ BEST_MODEL_PATH = MODEL_DIR / "best_vehicleverse_model.pth"
 TRAINING_HISTORY_PATH = MODEL_DIR / "training_history.json"
 MODEL_METRICS_PATH = MODEL_DIR / "model_metrics.json"
 
-# Google Drive Model File ID and Link
+# Google Drive Model Configuration
 GOOGLE_DRIVE_MODEL_ID = "1Bt6x2zuuli5TZ0EC67HmweyrBclESRD9"
 GOOGLE_DRIVE_LINK = f"https://drive.google.com/uc?id={GOOGLE_DRIVE_MODEL_ID}"
 
+# Memory optimization flag
+IS_PRODUCTION = os.environ.get('RENDER', False) or os.environ.get('RAILWAY_ENVIRONMENT', False)
+
 def download_model_if_needed():
-    """Download model from Google Drive if not present"""
-    if not BEST_MODEL_PATH.exists():
+    """Download model from Google Drive if not present - Memory optimized"""
+    if not BEST_MODEL_PATH.exists() and not IS_PRODUCTION:
         try:
             import gdown
             print("📦 Model not found. Downloading from Google Drive...")
             gdown.download(GOOGLE_DRIVE_LINK, output=str(BEST_MODEL_PATH), quiet=False, fuzzy=True)
             print("✅ Model downloaded successfully.")
             return True
-        except ImportError:
-            print("❌ gdown not installed. Cannot download model.")
-            return False
         except Exception as e:
             print(f"❌ Error downloading model: {e}")
             return False
+    elif IS_PRODUCTION:
+        print("🚀 Production mode: Skipping model download to save memory")
+        return False
     else:
         print("✅ Model already exists.")
         return True
@@ -128,3 +129,4 @@ print("✅ Vehicleverse Configuration Loaded Successfully!")
 print(f"📁 Project Root: {PROJECT_ROOT}")
 print(f"🚗 Vehicle Classes: {len(ACTUAL_VEHICLE_CLASSES)} types")
 print(f"📏 Size Classes: {len(SIZE_CLASSES)} categories")
+print(f"💾 Production Mode: {IS_PRODUCTION}")

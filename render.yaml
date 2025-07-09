@@ -2,10 +2,12 @@ services:
   - type: web
     name: vehicleverse
     env: python
-    buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --timeout 120 --workers 1 --max-requests 1000 --max-requests-jitter 100
+    buildCommand: pip install --no-cache-dir -r requirements.txt
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --timeout 300 --workers 1 --max-requests 100 --preload
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.0
-      - key: PORT
-        value: 10000
+      - key: RENDER
+        value: true
+      - key: WEB_CONCURRENCY
+        value: 1
