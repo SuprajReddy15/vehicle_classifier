@@ -1,4 +1,4 @@
-"""Vehicleverse Model Architecture - Ultra Lightweight"""
+"""Vehicleverse Model Architecture - FIXED to match saved model"""
 import torch
 import torch.nn as nn
 import torchvision.models as models
@@ -12,13 +12,13 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 class VehicleClassifier(nn.Module):
-    """Ultra-lightweight Vehicle Classifier"""
+    """Vehicle Classifier - EXACT match for your saved model"""
     def __init__(self,
                  architecture: str = 'resnet18',
                  pretrained: bool = True,
                  num_classes: int = 4,
                  num_sizes: int = 4,
-                 hidden_size: int = 128,
+                 hidden_size: int = 256,  # Increased to match saved model
                  dropout_rate: float = 0.5):
         super(VehicleClassifier, self).__init__()
 
@@ -27,7 +27,7 @@ class VehicleClassifier(nn.Module):
         self.num_sizes = num_sizes
         self.hidden_size = hidden_size
 
-        # Lightweight backbone
+        # Load backbone model
         if architecture == 'resnet18':
             if pretrained:
                 model = models.resnet18(weights=ResNet18_Weights.IMAGENET1K_V1)
@@ -36,30 +36,80 @@ class VehicleClassifier(nn.Module):
         else:
             raise ValueError(f"Unsupported architecture: {architecture}")
 
+        # Use only the feature extraction part
         self.backbone = nn.Sequential(*list(model.children())[:-2])
         self.feature_dim = 512
+
+        # Global average pooling
         self.global_pool = nn.AdaptiveAvgPool2d((1, 1))
 
-        # Ultra-lightweight feature extractor
+        # Attention mechanism (matches saved model)
+        self.attention = nn.Sequential(
+            nn.Linear(self.feature_dim, hidden_size),
+            nn.ReLU(inplace=True),
+            nn.Linear(hidden_size, self.feature_dim),
+            nn.Sigmoid()
+        )
+
+        # Feature extractor with BatchNorm (matches saved model structure)
         self.feature_extractor = nn.Sequential(
             nn.Dropout(dropout_rate),
             nn.Linear(self.feature_dim, hidden_size),
+            nn.BatchNorm1d(hidden_size),
+            nn.ReLU(inplace=True),
+            nn.Dropout(dropout_rate / 2),
+            nn.Linear(hidden_size, hidden_size),
+            nn.BatchNorm1d(hidden_size),
             nn.ReLU(inplace=True)
         )
 
-        # Minimal classifiers
-        self.vehicle_classifier = nn.Linear(hidden_size, num_classes)
-        self.size_classifier = nn.Linear(hidden_size, num_sizes)
+        # Multi-layer vehicle classifier with BatchNorm (matches saved model)
+        self.vehicle_classifier = nn.Sequential(
+            nn.Linear(hidden_size, hidden_size),
+            nn.BatchNorm1d(hidden_size),
+            nn.ReLU(inplace=True),
+            nn.Dropout(0.3),
+            nn.Linear(hidden_size, hidden_size // 2),
+            nn.BatchNorm1d(hidden_size // 2),
+            nn.ReLU(inplace=True),
+            nn.Dropout(0.2),
+            nn.Linear(hidden_size // 2, num_classes)
+        )
+
+        # Multi-layer size classifier with BatchNorm (matches saved model)
+        self.size_classifier = nn.Sequential(
+            nn.Linear(hidden_size, hidden_size),
+            nn.BatchNorm1d(hidden_size),
+            nn.ReLU(inplace=True),
+            nn.Dropout(0.3),
+            nn.Linear(hidden_size, hidden_size // 2),
+            nn.BatchNorm1d(hidden_size // 2),
+            nn.ReLU(inplace=True),
+            nn.Dropout(0.2),
+            nn.Linear(hidden_size // 2, num_sizes)
+        )
 
     def forward(self, x):
+        """Forward pass with attention mechanism"""
+        # Extract features
         features = self.backbone(x)
         features = self.global_pool(features)
         features = features.view(features.size(0), -1)
-        shared_features = self.feature_extractor(features)
+
+        # Apply attention
+        attention_weights = self.attention(features)
+        attended_features = features * attention_weights
+
+        # Extract shared features
+        shared_features = self.feature_extractor(attended_features)
+
+        # Get predictions
+        vehicle_output = self.vehicle_classifier(shared_features)
+        size_output = self.size_classifier(shared_features)
 
         return {
-            'vehicle': self.vehicle_classifier(shared_features),
-            'size': self.size_classifier(shared_features),
+            'vehicle': vehicle_output,
+            'size': size_output,
             'features': shared_features
         }
 
@@ -79,7 +129,7 @@ class ModelFactory:
             pretrained=config['pretrained'],
             num_classes=config['num_classes'],
             num_sizes=config['num_sizes'],
-            hidden_size=config['hidden_size'],
+            hidden_size=config.get('hidden_size', 256),  # Use 256 to match saved model
             dropout_rate=config['dropout_rate']
         )
 
@@ -97,6 +147,12 @@ class ModelFactory:
         checkpoint = {
             'epoch': epoch,
             'model_state_dict': model.state_dict(),
+            'model_config': {
+                'architecture': model.architecture,
+                'num_classes': model.num_classes,
+                'num_sizes': model.num_sizes,
+                'hidden_size': model.hidden_size
+            },
             'train_loss': train_loss,
             'val_loss': val_loss,
             'val_accuracy': val_accuracy,
@@ -123,7 +179,22 @@ class ModelFactory:
 
         try:
             checkpoint = torch.load(path, map_location=map_location, weights_only=False)
-            model = ModelFactory.create_model()
+
+            # Get model config from checkpoint or use default
+            model_config = checkpoint.get('model_config', {
+                'architecture': 'resnet18',
+                'num_classes': 4,
+                'num_sizes': 4,
+                'hidden_size': 256
+            })
+
+            model = VehicleClassifier(
+                architecture=model_config.get('architecture', 'resnet18'),
+                num_classes=model_config.get('num_classes', 4),
+                num_sizes=model_config.get('num_sizes', 4),
+                hidden_size=model_config.get('hidden_size', 256)
+            )
+
             model.load_state_dict(checkpoint['model_state_dict'])
             model.to(device)
             model.eval()

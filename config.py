@@ -1,4 +1,4 @@
-"""Vehicleverse Configuration - Production Deployment Ready"""
+"""Vehicleverse Configuration - FIXED for Model Match"""
 import os
 from pathlib import Path
 
@@ -42,20 +42,20 @@ SIZE_DESCRIPTIONS = {
     'extra-large': 'Maximum capacity - Built for heavy-duty work and transport'
 }
 
-# Model Configuration (Memory Optimized)
+# Model Configuration (FIXED to match saved model)
 MODEL_CONFIG = {
     'architecture': 'resnet18',
     'pretrained': True,
     'num_classes': len(ACTUAL_VEHICLE_CLASSES),
     'num_sizes': len(SIZE_CLASSES),
-    'hidden_size': 128,  # Reduced for memory efficiency
+    'hidden_size': 256,  # INCREASED to match saved model
     'dropout_rate': 0.5,
     'feature_extract': False
 }
 
 # Training Configuration
 TRAINING_CONFIG = {
-    'batch_size': 4,  # Small batch size for memory
+    'batch_size': 4,
     'num_epochs': 25,
     'learning_rate': 0.001,
     'weight_decay': 1e-4,
@@ -74,7 +74,7 @@ IMAGE_CONFIG = {
     'resize_size': (256, 256),
     'mean': [0.485, 0.456, 0.406],
     'std': [0.229, 0.224, 0.225],
-    'max_file_size': 5 * 1024 * 1024,  # 5MB limit
+    'max_file_size': 5 * 1024 * 1024,
     'allowed_extensions': {'.jpg', '.jpeg', '.png', '.bmp', '.gif', '.webp'},
     'quality_threshold': 32
 }
