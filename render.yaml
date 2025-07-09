@@ -3,7 +3,7 @@ services:
     name: vehicleverse
     env: python
     buildCommand: pip install --no-cache-dir -r requirements.txt
-    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --timeout 300 --workers 1 --max-requests 50 --preload --worker-class sync
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --timeout 120 --workers 1 --max-requests 10 --max-requests-jitter 5 --preload --worker-class sync --worker-connections 10
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.0
@@ -13,3 +13,5 @@ services:
         value: 1
       - key: PYTHONUNBUFFERED
         value: true
+      - key: MALLOC_TRIM_THRESHOLD_
+        value: 100000

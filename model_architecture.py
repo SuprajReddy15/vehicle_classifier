@@ -1,4 +1,4 @@
-"""Vehicleverse Model Architecture - FIXED to match saved model"""
+"""Vehicleverse Model Architecture - EXACT MATCH for saved model"""
 import torch
 import torch.nn as nn
 import torchvision.models as models
@@ -12,13 +12,13 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 class VehicleClassifier(nn.Module):
-    """Vehicle Classifier - EXACT match for your saved model"""
+    """Vehicle Classifier - EXACT match for your saved model structure"""
     def __init__(self,
                  architecture: str = 'resnet18',
                  pretrained: bool = True,
                  num_classes: int = 4,
                  num_sizes: int = 4,
-                 hidden_size: int = 256,  # Increased to match saved model
+                 hidden_size: int = 256,
                  dropout_rate: float = 0.5):
         super(VehicleClassifier, self).__init__()
 
@@ -43,50 +43,49 @@ class VehicleClassifier(nn.Module):
         # Global average pooling
         self.global_pool = nn.AdaptiveAvgPool2d((1, 1))
 
-        # Attention mechanism (matches saved model)
-        self.attention = nn.Sequential(
-            nn.Linear(self.feature_dim, hidden_size),
-            nn.ReLU(inplace=True),
-            nn.Linear(hidden_size, self.feature_dim),
-            nn.Sigmoid()
-        )
+        # Attention mechanism - EXACT match (fc1, fc2 naming)
+        self.attention = nn.Sequential()
+        self.attention.add_module('fc1', nn.Linear(self.feature_dim, hidden_size))
+        self.attention.add_module('relu1', nn.ReLU(inplace=True))
+        self.attention.add_module('fc2', nn.Linear(hidden_size, self.feature_dim))
+        self.attention.add_module('sigmoid', nn.Sigmoid())
 
-        # Feature extractor with BatchNorm (matches saved model structure)
+        # Feature extractor - EXACT match (512→256 with BatchNorm)
         self.feature_extractor = nn.Sequential(
             nn.Dropout(dropout_rate),
-            nn.Linear(self.feature_dim, hidden_size),
+            nn.Linear(self.feature_dim, hidden_size),  # 512→256
             nn.BatchNorm1d(hidden_size),
             nn.ReLU(inplace=True),
             nn.Dropout(dropout_rate / 2),
-            nn.Linear(hidden_size, hidden_size),
+            nn.Linear(hidden_size, hidden_size),  # 256→256
             nn.BatchNorm1d(hidden_size),
             nn.ReLU(inplace=True)
         )
 
-        # Multi-layer vehicle classifier with BatchNorm (matches saved model)
+        # Vehicle classifier - EXACT match (256→128→4)
         self.vehicle_classifier = nn.Sequential(
-            nn.Linear(hidden_size, hidden_size),
-            nn.BatchNorm1d(hidden_size),
-            nn.ReLU(inplace=True),
-            nn.Dropout(0.3),
-            nn.Linear(hidden_size, hidden_size // 2),
-            nn.BatchNorm1d(hidden_size // 2),
-            nn.ReLU(inplace=True),
-            nn.Dropout(0.2),
-            nn.Linear(hidden_size // 2, num_classes)
+            nn.Linear(hidden_size, hidden_size),      # 0: 256→256
+            nn.BatchNorm1d(hidden_size),              # 1: BatchNorm(256)
+            nn.ReLU(inplace=True),                    # 2: ReLU
+            nn.Dropout(0.3),                         # 3: Dropout
+            nn.Linear(hidden_size, hidden_size // 2), # 4: 256→128
+            nn.BatchNorm1d(hidden_size // 2),        # 5: BatchNorm(128)
+            nn.ReLU(inplace=True),                   # 6: ReLU
+            nn.Dropout(0.2),                         # 7: Dropout
+            nn.Linear(hidden_size // 2, num_classes) # 8: 128→4
         )
 
-        # Multi-layer size classifier with BatchNorm (matches saved model)
+        # Size classifier - EXACT match (256→128→4)
         self.size_classifier = nn.Sequential(
-            nn.Linear(hidden_size, hidden_size),
-            nn.BatchNorm1d(hidden_size),
-            nn.ReLU(inplace=True),
-            nn.Dropout(0.3),
-            nn.Linear(hidden_size, hidden_size // 2),
-            nn.BatchNorm1d(hidden_size // 2),
-            nn.ReLU(inplace=True),
-            nn.Dropout(0.2),
-            nn.Linear(hidden_size // 2, num_sizes)
+            nn.Linear(hidden_size, hidden_size),      # 0: 256→256
+            nn.BatchNorm1d(hidden_size),              # 1: BatchNorm(256)
+            nn.ReLU(inplace=True),                    # 2: ReLU
+            nn.Dropout(0.3),                         # 3: Dropout
+            nn.Linear(hidden_size, hidden_size // 2), # 4: 256→128
+            nn.BatchNorm1d(hidden_size // 2),        # 5: BatchNorm(128)
+            nn.ReLU(inplace=True),                   # 6: ReLU
+            nn.Dropout(0.2),                         # 7: Dropout
+            nn.Linear(hidden_size // 2, num_sizes)   # 8: 128→4
         )
 
     def forward(self, x):
@@ -129,7 +128,7 @@ class ModelFactory:
             pretrained=config['pretrained'],
             num_classes=config['num_classes'],
             num_sizes=config['num_sizes'],
-            hidden_size=config.get('hidden_size', 256),  # Use 256 to match saved model
+            hidden_size=config.get('hidden_size', 256),  # EXACT: 256
             dropout_rate=config['dropout_rate']
         )
 
@@ -185,14 +184,14 @@ class ModelFactory:
                 'architecture': 'resnet18',
                 'num_classes': 4,
                 'num_sizes': 4,
-                'hidden_size': 256
+                'hidden_size': 256  # EXACT match
             })
 
             model = VehicleClassifier(
                 architecture=model_config.get('architecture', 'resnet18'),
                 num_classes=model_config.get('num_classes', 4),
                 num_sizes=model_config.get('num_sizes', 4),
-                hidden_size=model_config.get('hidden_size', 256)
+                hidden_size=model_config.get('hidden_size', 256)  # EXACT: 256
             )
 
             model.load_state_dict(checkpoint['model_state_dict'])
