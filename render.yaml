@@ -3,7 +3,7 @@ services:
     name: vehicleverse
     env: python
     buildCommand: pip install --no-cache-dir -r requirements.txt
-    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --timeout 300 --workers 1 --max-requests 100 --preload
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --timeout 300 --workers 1 --max-requests 50 --preload --worker-class sync
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.0
@@ -11,3 +11,5 @@ services:
         value: true
       - key: WEB_CONCURRENCY
         value: 1
+      - key: PYTHONUNBUFFERED
+        value: true

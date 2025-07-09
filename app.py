@@ -1,4 +1,4 @@
-"""Vehicleverse Flask Application - Memory Optimized for Deployment"""
+"""Vehicleverse Flask Application - Production Deployment Ready"""
 from flask import Flask, request, jsonify, render_template
 import torch
 import torch.serialization
@@ -11,6 +11,7 @@ from werkzeug.utils import secure_filename
 import base64
 import uuid
 from pathlib import Path
+import gc
 from config import *
 
 # Configure logging
@@ -30,123 +31,155 @@ app.config['MAX_CONTENT_LENGTH'] = FLASK_CONFIG['max_content_length']
 app.config['UPLOAD_FOLDER'] = FLASK_CONFIG['upload_folder']
 
 class VehicleversePredictor:
-    """Memory-optimized Vehicleverse prediction engine"""
+    """Production-ready Vehicleverse prediction engine with fallbacks"""
 
     def __init__(self):
         self.model = None
-        self.device = torch.device("cpu")  # Force CPU to save memory
+        self.device = torch.device("cpu")  # CPU only for memory efficiency
         self.transform = None
         self.classes = {
             'vehicle': VEHICLE_CLASSES,
             'size': SIZE_CLASSES
         }
         self.model_loaded = False
+        self.demo_mode = False
 
         # Setup transforms first
         self.setup_transforms()
 
-        # Try to load model, but don't fail if it doesn't exist
-        self.load_model()
+        # Initialize model with fallbacks
+        self.initialize_model()
 
-    def load_model(self):
-        """Load model with memory optimization"""
+    def initialize_model(self):
+        """Initialize model with multiple fallback strategies"""
         try:
-            # Check if model exists
-            if not BEST_MODEL_PATH.exists():
-                if IS_PRODUCTION:
-                    logger.info("🚀 Production mode: Creating lightweight dummy model")
-                    self.create_lightweight_model()
-                    return True
-                else:
-                    # Try to download model
-                    download_model_if_needed()
+            # Strategy 1: Try to download and load real model
+            if self.try_load_real_model():
+                return
 
-            if BEST_MODEL_PATH.exists():
-                # Load model with memory mapping
-                checkpoint = torch.load(BEST_MODEL_PATH, map_location=self.device, weights_only=False)
+            # Strategy 2: Create lightweight demo model
+            if self.create_demo_model():
+                return
 
-                # Import model architecture only when needed
-                from model_architecture import ModelFactory
-                model_config = checkpoint.get('model_config', MODEL_CONFIG)
-                self.model = ModelFactory.create_model(model_config)
-
-                # Load state dict
-                self.model.load_state_dict(checkpoint['model_state_dict'])
-                self.model.to(self.device)
-                self.model.eval()
-
-                # Clear checkpoint from memory
-                del checkpoint
-
-                logger.info(f"✅ Model loaded successfully!")
-                self.model_loaded = True
-                return True
-            else:
-                logger.warning("⚠️ Model file not found, using dummy model")
-                self.create_lightweight_model()
-                return True
+            # Strategy 3: Pure random predictions (last resort)
+            self.demo_mode = True
+            logger.info("🎲 Using random prediction mode as final fallback")
 
         except Exception as e:
-            logger.error(f"❌ Error loading model: {e}")
-            self.create_lightweight_model()
+            logger.error(f"❌ All model initialization strategies failed: {e}")
+            self.demo_mode = True
+
+    def try_load_real_model(self):
+        """Try to load the actual trained model"""
+        try:
+            # Try to download model
+            model_available = download_model_if_needed()
+
+            if not model_available or not BEST_MODEL_PATH.exists():
+                logger.info("📦 Real model not available, trying demo model...")
+                return False
+
+            logger.info("🔄 Loading trained model...")
+
+            # Load checkpoint
+            checkpoint = torch.load(BEST_MODEL_PATH, map_location=self.device, weights_only=False)
+
+            # Import model architecture
+            from model_architecture import ModelFactory
+            model_config = checkpoint.get('model_config', MODEL_CONFIG)
+
+            # Create and load model
+            self.model = ModelFactory.create_model(model_config)
+            self.model.load_state_dict(checkpoint['model_state_dict'])
+            self.model.to(self.device)
+            self.model.eval()
+
+            # Clear checkpoint from memory
+            del checkpoint
+            gc.collect()
+
+            self.model_loaded = True
+            self.demo_mode = False
+            logger.info("✅ Real model loaded successfully!")
+            return True
+
+        except Exception as e:
+            logger.error(f"❌ Failed to load real model: {e}")
             return False
 
-    def create_lightweight_model(self):
-        """Create a lightweight dummy model for deployment"""
+    def create_demo_model(self):
+        """Create a lightweight demo model"""
         try:
+            logger.info("🎭 Creating lightweight demo model...")
+
             import torch.nn as nn
 
-            class LightweightModel(nn.Module):
+            class UltraLightModel(nn.Module):
                 def __init__(self):
                     super().__init__()
+                    # Ultra lightweight model
                     self.features = nn.Sequential(
-                        nn.AdaptiveAvgPool2d((7, 7)),
+                        nn.AdaptiveAvgPool2d((2, 2)),
                         nn.Flatten(),
-                        nn.Linear(7*7*3, 128),
+                        nn.Linear(2*2*3, 32),
                         nn.ReLU(),
                         nn.Dropout(0.5)
                     )
-                    self.vehicle_classifier = nn.Linear(128, len(VEHICLE_CLASSES))
-                    self.size_classifier = nn.Linear(128, len(SIZE_CLASSES))
+                    self.vehicle_classifier = nn.Linear(32, len(VEHICLE_CLASSES))
+                    self.size_classifier = nn.Linear(32, len(SIZE_CLASSES))
 
                 def forward(self, x):
-                    # Simple forward pass for demo
-                    batch_size = x.size(0)
                     features = self.features(x)
                     return {
                         'vehicle': self.vehicle_classifier(features),
                         'size': self.size_classifier(features)
                     }
 
-            self.model = LightweightModel()
+            self.model = UltraLightModel()
             self.model.to(self.device)
             self.model.eval()
             self.model_loaded = True
-            logger.info("✅ Lightweight dummy model created!")
+            self.demo_mode = True
+            logger.info("✅ Demo model created successfully!")
             return True
 
         except Exception as e:
-            logger.error(f"❌ Failed to create lightweight model: {e}")
+            logger.error(f"❌ Failed to create demo model: {e}")
             return False
 
     def setup_transforms(self):
         """Setup image preprocessing transforms"""
-        from torchvision import transforms
-        self.transform = transforms.Compose([
-            transforms.Resize((256, 256)),
-            transforms.CenterCrop(IMAGE_CONFIG['input_size']),
-            transforms.ToTensor(),
-            transforms.Normalize(
-                mean=IMAGE_CONFIG['mean'],
-                std=IMAGE_CONFIG['std']
-            )
-        ])
+        try:
+            from torchvision import transforms
+            self.transform = transforms.Compose([
+                transforms.Resize((256, 256)),
+                transforms.CenterCrop(IMAGE_CONFIG['input_size']),
+                transforms.ToTensor(),
+                transforms.Normalize(
+                    mean=IMAGE_CONFIG['mean'],
+                    std=IMAGE_CONFIG['std']
+                )
+            ])
+        except Exception as e:
+            logger.error(f"❌ Failed to setup transforms: {e}")
+            self.transform = None
 
     def predict(self, image):
-        """Make prediction on a single image"""
-        if self.model is None:
-            return self.create_demo_prediction()
+        """Make prediction with multiple fallback strategies"""
+        try:
+            # Strategy 1: Model-based prediction
+            if self.model is not None and self.transform is not None:
+                return self.model_predict(image)
 
+            # Strategy 2: Random prediction (fallback)
+            return self.random_predict()
+
+        except Exception as e:
+            logger.error(f"❌ Prediction error: {e}")
+            return self.random_predict()
+
+    def model_predict(self, image):
+        """Model-based prediction"""
         try:
             # Preprocess image
             if isinstance(image, str):
@@ -166,7 +199,6 @@ class VehicleversePredictor:
             confidences = {}
 
             for task in ['vehicle', 'size']:
-                # Get probabilities
                 probs = torch.softmax(outputs[task], dim=1)
                 confidence, predicted = torch.max(probs, 1)
 
@@ -192,7 +224,8 @@ class VehicleversePredictor:
                 'overall_confidence': overall_confidence,
                 'timestamp': datetime.now().isoformat(),
                 'model_info': {
-                    'architecture': 'ResNet-18' if self.model_loaded else 'Demo Model',
+                    'architecture': 'Demo Model' if self.demo_mode else 'ResNet-18',
+                    'mode': 'demo' if self.demo_mode else 'production',
                     'features': ['Vehicle Type', 'Size Category'],
                     'classes': {
                         'vehicle': len(self.classes['vehicle']),
@@ -201,14 +234,18 @@ class VehicleversePredictor:
                 }
             }
 
+            # Clean up
+            del input_tensor, outputs
+            gc.collect()
+
             return result
 
         except Exception as e:
-            logger.error(f"❌ Prediction error: {e}")
-            return self.create_demo_prediction()
+            logger.error(f"❌ Model prediction error: {e}")
+            return self.random_predict()
 
-    def create_demo_prediction(self):
-        """Create a demo prediction for when model is not available"""
+    def random_predict(self):
+        """Random prediction fallback"""
         import random
 
         vehicle_idx = random.randint(0, len(VEHICLE_CLASSES) - 1)
@@ -233,7 +270,8 @@ class VehicleversePredictor:
             'overall_confidence': random.uniform(70, 90),
             'timestamp': datetime.now().isoformat(),
             'model_info': {
-                'architecture': 'Demo Mode',
+                'architecture': 'Random Demo',
+                'mode': 'fallback',
                 'features': ['Vehicle Type', 'Size Category'],
                 'classes': {
                     'vehicle': len(VEHICLE_CLASSES),
@@ -302,8 +340,9 @@ def health():
     return jsonify({
         'status': 'healthy',
         'model_loaded': predictor.model_loaded,
+        'demo_mode': predictor.demo_mode,
         'timestamp': datetime.now().isoformat(),
-        'version': '2.0.0',
+        'version': '4.0.0',
         'memory_optimized': True
     })
 
@@ -311,10 +350,11 @@ def health():
 def model_info():
     """Get model information"""
     return jsonify({
-        'architecture': 'ResNet-18' if predictor.model_loaded else 'Demo Model',
+        'architecture': 'Demo Model' if predictor.demo_mode else 'ResNet-18',
         'vehicle_classes': VEHICLE_CLASSES,
         'size_classes': SIZE_CLASSES,
-        'status': 'loaded' if predictor.model_loaded else 'demo_mode',
+        'status': 'demo' if predictor.demo_mode else 'production',
+        'model_loaded': predictor.model_loaded,
         'memory_optimized': True
     })
 
@@ -326,7 +366,7 @@ def allowed_file(filename):
 @app.errorhandler(413)
 def too_large(e):
     """Handle file too large error"""
-    return jsonify({'error': 'File too large. Maximum size is 10MB.'}), 413
+    return jsonify({'error': 'File too large. Maximum size is 5MB.'}), 413
 
 @app.errorhandler(404)
 def not_found(e):
@@ -343,7 +383,8 @@ if __name__ == '__main__':
     print(f"🌐 URL: http://localhost:{FLASK_CONFIG['port']}")
     print(f"📱 Features: Professional vehicle classification")
     print(f"🎯 Ready to analyze: Type + Size")
-    print(f"💾 Memory Optimized: {IS_PRODUCTION}")
+    print(f"💾 Production Mode: {IS_PRODUCTION}")
+    print(f"🎭 Demo Mode: {predictor.demo_mode}")
     print("=" * 60)
 
     app.run(
