@@ -1,4 +1,4 @@
-"""Vehicleverse Configuration - FIXED for Model Match"""
+"""Vehicleverse Configuration - FINAL CORRECT VERSION"""
 import os
 from pathlib import Path
 
@@ -42,13 +42,13 @@ SIZE_DESCRIPTIONS = {
     'extra-large': 'Maximum capacity - Built for heavy-duty work and transport'
 }
 
-# Model Configuration (FIXED to match saved model)
+# Model Configuration (FINAL CORRECT - matches saved model)
 MODEL_CONFIG = {
     'architecture': 'resnet18',
     'pretrained': True,
     'num_classes': len(ACTUAL_VEHICLE_CLASSES),
     'num_sizes': len(SIZE_CLASSES),
-    'hidden_size': 256,  # INCREASED to match saved model
+    'hidden_size': 32,  # FINAL CORRECT: 32 not 256!
     'dropout_rate': 0.5,
     'feature_extract': False
 }
