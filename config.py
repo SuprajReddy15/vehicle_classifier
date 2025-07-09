@@ -1,4 +1,3 @@
-"""Vehicleverse Configuration - FINAL CORRECT VERSION"""
 import os
 from pathlib import Path
 
@@ -11,12 +10,11 @@ TEMPLATES_DIR = PROJECT_ROOT / "templates"
 LOGS_DIR = PROJECT_ROOT / "logs"
 RESULTS_DIR = PROJECT_ROOT / "results"
 
-# Create directories
+# Create necessary directories
 for directory in [MODEL_DIR, STATIC_DIR, TEMPLATES_DIR, LOGS_DIR, RESULTS_DIR]:
     directory.mkdir(exist_ok=True)
 
 def get_actual_vehicle_folders():
-    """Get actual vehicle folders from the data directory"""
     if not DATA_DIR.exists():
         return VEHICLE_CLASSES
 
@@ -42,18 +40,18 @@ SIZE_DESCRIPTIONS = {
     'extra-large': 'Maximum capacity - Built for heavy-duty work and transport'
 }
 
-# Model Configuration (FINAL CORRECT - matches saved model)
+# Final CORRECT Model Configuration
 MODEL_CONFIG = {
     'architecture': 'resnet18',
     'pretrained': True,
     'num_classes': len(ACTUAL_VEHICLE_CLASSES),
     'num_sizes': len(SIZE_CLASSES),
-    'hidden_size': 32,  # FINAL CORRECT: 32 not 256!
+    'hidden_size': 32,
     'dropout_rate': 0.5,
     'feature_extract': False
 }
 
-# Training Configuration
+# Training Settings
 TRAINING_CONFIG = {
     'batch_size': 4,
     'num_epochs': 25,
@@ -68,7 +66,7 @@ TRAINING_CONFIG = {
     'min_lr': 1e-6
 }
 
-# Image Processing Configuration
+# Image Preprocessing
 IMAGE_CONFIG = {
     'input_size': (224, 224),
     'resize_size': (256, 256),
@@ -79,7 +77,7 @@ IMAGE_CONFIG = {
     'quality_threshold': 32
 }
 
-# Flask Configuration
+# Flask Setup
 FLASK_CONFIG = {
     'host': '0.0.0.0',
     'port': int(os.environ.get('PORT', 5000)),
@@ -89,8 +87,6 @@ FLASK_CONFIG = {
     'upload_folder': STATIC_DIR / 'uploads',
     'secret_key': os.environ.get('SECRET_KEY', 'vehicleverse-secret-key-2024')
 }
-
-# Create upload folder
 FLASK_CONFIG['upload_folder'].mkdir(exist_ok=True)
 
 # Model Paths
@@ -99,18 +95,25 @@ BEST_MODEL_PATH = MODEL_DIR / "best_vehicleverse_model.pth"
 TRAINING_HISTORY_PATH = MODEL_DIR / "training_history.json"
 MODEL_METRICS_PATH = MODEL_DIR / "model_metrics.json"
 
-# Google Drive Model Configuration
+# Google Drive Auto-Download
 GOOGLE_DRIVE_MODEL_ID = "1Bt6x2zuuli5TZ0EC67HmweyrBclESRD9"
 GOOGLE_DRIVE_LINK = f"https://drive.google.com/uc?id={GOOGLE_DRIVE_MODEL_ID}"
 
-# Production Environment Detection
+# Detect production mode (Render, Railway, etc)
 IS_PRODUCTION = bool(os.environ.get('RENDER')) or bool(os.environ.get('RAILWAY_ENVIRONMENT')) or bool(os.environ.get('HEROKU'))
 
 def download_model_if_needed():
-    """Download model from Google Drive if not present"""
+    """Download from Google Drive if model not present or corrupted"""
     if BEST_MODEL_PATH.exists():
-        print("✅ Model already exists.")
-        return True
+        try:
+            import torch
+            from model_architecture import ModelFactory
+            checkpoint = torch.load(BEST_MODEL_PATH, map_location='cpu')
+            _ = ModelFactory.create_model(checkpoint.get('model_config', MODEL_CONFIG))
+            return True
+        except Exception as e:
+            print(f"⚠️ Corrupted model file. Deleting and redownloading... Error: {e}")
+            BEST_MODEL_PATH.unlink(missing_ok=True)
 
     try:
         import gdown
@@ -120,11 +123,10 @@ def download_model_if_needed():
             print("✅ Model downloaded successfully.")
             return True
         else:
-            print("⚠️ Model download failed, will use demo mode.")
+            print("⚠️ Download failed. Falling back to demo mode.")
             return False
     except Exception as e:
-        print(f"❌ Error downloading model: {e}")
-        print("⚠️ Will use demo mode instead.")
+        print(f"❌ Download failed: {e}")
         return False
 
 print("✅ Vehicleverse Configuration Loaded Successfully!")
