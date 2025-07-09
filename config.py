@@ -84,12 +84,12 @@ IMAGE_CONFIG = {
 # Flask Configuration
 FLASK_CONFIG = {
     'host': '0.0.0.0',
-    'port': 5000,
+    'port': int(os.environ.get('PORT', 5000)),
     'debug': False,
     'threaded': True,
     'max_content_length': IMAGE_CONFIG['max_file_size'],
     'upload_folder': STATIC_DIR / 'uploads',
-    'secret_key': 'vehicleverse-secret-key-2024'
+    'secret_key': os.environ.get('SECRET_KEY', 'vehicleverse-secret-key-2024')
 }
 
 # Create upload folder
@@ -100,6 +100,29 @@ MODEL_PATH = MODEL_DIR / "vehicleverse_model.pth"
 BEST_MODEL_PATH = MODEL_DIR / "best_vehicleverse_model.pth"
 TRAINING_HISTORY_PATH = MODEL_DIR / "training_history.json"
 MODEL_METRICS_PATH = MODEL_DIR / "model_metrics.json"
+
+# Google Drive Model File ID and Link
+GOOGLE_DRIVE_MODEL_ID = "1Bt6x2zuuli5TZ0EC67HmweyrBclESRD9"
+GOOGLE_DRIVE_LINK = f"https://drive.google.com/uc?id={GOOGLE_DRIVE_MODEL_ID}"
+
+def download_model_if_needed():
+    """Download model from Google Drive if not present"""
+    if not BEST_MODEL_PATH.exists():
+        try:
+            import gdown
+            print("📦 Model not found. Downloading from Google Drive...")
+            gdown.download(GOOGLE_DRIVE_LINK, output=str(BEST_MODEL_PATH), quiet=False, fuzzy=True)
+            print("✅ Model downloaded successfully.")
+            return True
+        except ImportError:
+            print("❌ gdown not installed. Cannot download model.")
+            return False
+        except Exception as e:
+            print(f"❌ Error downloading model: {e}")
+            return False
+    else:
+        print("✅ Model already exists.")
+        return True
 
 print("✅ Vehicleverse Configuration Loaded Successfully!")
 print(f"📁 Project Root: {PROJECT_ROOT}")

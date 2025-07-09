@@ -1,133 +1,109 @@
-# 🚗 VehicleVerse - Professional Vehicle Classification System
+# 🚗 Vehicle Image Classifier using Deep Learning
 
-VehicleVerse is an advanced vehicle image classification system built using deep learning and full-stack technologies. It classifies different types of vehicles using a trained PyTorch model and provides an intuitive web interface for users to upload and classify images instantly.
-
----
-
-## 🧠 Trained Model Files (Download Required)
-
-Due to GitHub’s 100MB file size limit, the trained `.pth` model files are hosted externally.
-
-📦 **Download the models from Google Drive**:  
-➡️ [Click here to download model weights](https://drive.google.com/drive/folders/11rI4foboJqEg37u8KfRNIF7SXhvEBE9D?usp=sharing)
-
-### 🔧 How to Use Model Files:
-
-1. Download all `.pth` files from the Drive folder
-2. Place them inside your project structure like this:
-
-```
-vehicle_classifier/
-├── app.py
-├── model/
-│   ├── best_vehicle_classifier.pth
-│   ├── checkpoint_epoch_5.pth
-│   ├── ...
-```
+A deep learning-based web application that classifies vehicle images into one of four categories: **Car**, **Truck**, **Motorbike**, or **Bicycle**. Built using **PyTorch**, **Flask**, and **HTML/CSS**, this project demonstrates the full flow from training a model to deploying it on a web interface.
 
 ---
 
-## 💻 Tech Stack
+## 🔧 Tech Stack
 
-| Layer        | Technologies                         |
-|-------------|--------------------------------------|
-| 🔙 Backend   | Python, Flask, PyTorch               |
-| 🧠 ML        | Custom CNNs, Transfer Learning (optional) |
-| 🧮 Utilities | NumPy, Pandas, Matplotlib            |
-| 🌐 Frontend  | HTML, CSS, JavaScript (Jinja2)       |
-| 🗃️ Storage   | Git LFS for large files (excluded from GitHub) |
+- **Frontend**: HTML, CSS, TailwindCSS (optional), JavaScript
+- **Backend**: Python, Flask
+- **Deep Learning**: PyTorch, torchvision
+- **Model**: Pretrained CNN (ResNet18 fine-tuned)
+- **Tools**: Git, VS Code / PyCharm
 
 ---
 
 ## 🚀 Features
 
-- Upload vehicle images and classify them instantly
-- Real-time predictions using trained PyTorch models
-- Organized logs, results, and datasets
-- Clean, modular project structure
-- Easily extendable with new models or frontend improvements
+- Upload a vehicle image via UI
+- Predict the vehicle type: `Car`, `Truck`, `Motorbike`, or `Bicycle`
+- Display result with predicted label
+- Modular folder structure
+- Contact section and footer info personalized
 
 ---
 
-## 📂 Project Structure
+## 📁 Project Structure
 
-```
-vehicle_classifier/
-├── app.py
-├── config.py
-├── dataset_manager.py
-├── model_architecture.py
-├── trainer.py
-├── run_pipeline.py
-├── templates/
-│   └── index.html
-├── static/
-│   ├── style.css
-│   └── uploads/
-├── logs/
-│   ├── pipeline.log
-│   └── training.log
-├── results/
-│   ├── dataset_analysis.png
-│   ├── dataset_statistics.json
-│   └── dataset_report.html
-├── model/  ← (place `.pth` files here)
-└── requirements.txt
-```
+vehicle_jod/
+├── static/ # CSS, JS, images
+├── templates/ # HTML files
+│ └── index.html # Main UI
+├── model/ # Saved PyTorch model
+│ └── vehicle_model.pth
+├── app.py # Flask backend
+├── utils.py # Prediction and helper functions
+└── README.md # This file
+
 
 ---
 
-## ⚙️ How to Run
+## ⚙️ How to Run Locally
 
-1. **Install requirements**  
-   *(Use a virtual environment if possible)*
-
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-2. **Run the Flask app**
-
-   ```bash
-   python app.py
-   ```
-
-3. Open your browser and go to:  
-   `http://127.0.0.1:5000`
-
----
-
-## 📈 Training Pipeline (Optional)
-
-You can re-train or fine-tune the model using your own dataset:
-
+1. **Clone the Repository**  
 ```bash
-python run_pipeline.py
-```
+git clone https://github.com/SuprajReddy15/vehicle_classifier.git
+cd vehicle_classifier
+Create a Virtual Environment
 
-Logs and results will be saved in the `logs/` and `results/` folders.
+bash
+Copy
+Edit
+python -m venv venv
+venv\Scripts\activate  # On Windows
+# or
+source venv/bin/activate  # On Mac/Linux
+Install Dependencies
 
----
+bash
+Copy
+Edit
+pip install -r requirements.txt
+Run the Flask App
 
-## 🤝 Contributing
+bash
+Copy
+Edit
+python app.py
+Visit in Browser
+Open http://127.0.0.1:5000 and upload a vehicle image.
 
-Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
+🔮 Future Improvements
+ Drag-and-drop image upload
 
----
+ Confidence score display
 
-## 📃 License
+ Prediction history log
 
-This project is open source and free to use under the MIT License.
+ React frontend (optional)
 
----
+ Mobile app (React Native / Flutter)
 
-## 🙌 Credits
+🧠 Model Info
+Architecture: ResNet18 (transfer learning)
 
-Developed by Supraj Reddy  
-Guided by real-world deployment and ML engineering best practices
+Trained on: Custom Kaggle dataset (Car, Truck, Motorbike, Bicycle)
 
-## 🌐 Live Demo
+Accuracy: ~94% on validation set
 
-Try the app here:  
-👉 [Vehicle Classifier Web App (Hosted on Render)](https://vehicle-classifier-h9yn.onrender.com)
+📬 Contact
+Thamadapally Supraj Reddy
+Email: supu1513reddy@gmail.com
+GitHub: github.com/SuprajReddy15
+LinkedIn: View Profile
+
+📜 License
+This project is for academic and demonstration purposes.
+
+🙏 Acknowledgements
+PyTorch
+
+Flask
+
+Kaggle Dataset
+
+vbnet
+Copy
+Edit
 
